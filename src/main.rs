@@ -7,7 +7,6 @@ use std::fmt;
 use std::mem;
 use std::sync::atomic::Ordering;
 
-
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
 type PieceMap = [(u8, u8); 4];
@@ -253,7 +252,11 @@ impl Grid {
         let mut heights = [0u8; GRID_COLUMNS];
         for column in 0..GRID_COLUMNS {
             for row in 0..GRID_ROWS {
-                heights[column] += if grid_map[row][column] == PieceKind::None { 0 } else { 1 };
+                heights[column] += if grid_map[row][column] == PieceKind::None {
+                    0
+                } else {
+                    1
+                };
             }
         }
         Self {
