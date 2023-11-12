@@ -1,11 +1,10 @@
 #[macro_use]
 extern crate static_assertions;
 
-use bitvec::prelude::*;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::mem;
-use std::sync::atomic::Ordering;
+use rand::{distributions::{Distribution, Standard}, Rng,};
 
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
@@ -31,12 +30,33 @@ enum PieceKind {
     None,
 }
 
+impl Distribution<PieceKind> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PieceKind {
+        match rng.gen_range(0..=6) {
+            0 => PieceKind::I,
+            1 => PieceKind::J,
+            2 => PieceKind::L,
+            3 => PieceKind::O,
+            4 => PieceKind::S,
+            5 => PieceKind::T,
+            _ => PieceKind::Z,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 enum Rotation {
     Rot0,
     Rot90,
     Rot180,
     Rot270,
+}
+
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 impl TryFrom<i32> for Rotation {
@@ -158,6 +178,7 @@ struct Piece {
     piece_dimensions: PieceDimensions,
     rotation: Rotation,
     rotated_pieces: [PieceMap; 4],
+    position: GridPosition,
 }
 
 impl fmt::Debug for Piece {
@@ -191,11 +212,14 @@ impl Piece {
             PieceKind::Z => PieceDimensions::new(PIECE_Z),
             _ => panic!("Invalid piece type: {:?}", kind),
         };
+        let xpos = (GRID_COLUMNS as isize / 2 - piece_dimensions.width as isize / 2) as usize;
+        let ypos = (GRID_ROWS as isize - piece_dimensions.height as isize) as usize;
         Piece {
             kind: kind,
             rotated_pieces: piece_dimensions.get_rotated_piece_maps(),
             piece_dimensions: piece_dimensions,
             rotation: Rotation::Rot0,
+            position: GridPosition { row: ypos, col: xpos, }
         }
     }
 
@@ -215,6 +239,15 @@ impl Piece {
     fn rotate_180(&mut self) {
         self.rotate(Rotation::Rot180);
     }
+    
+    fn move_piece(&mut self, direction: Direction) {
+        match direction {
+            Direction::Up => self.position.row += 1,
+            Direction::Down => self.position.row -= 1,
+            Direction::Left => self.position.col -= 1,
+            Direction::Right => self.position.col += 1,
+        }
+    }
 }
 
 #[derive(Bundle)]
@@ -225,7 +258,7 @@ struct PieceBundle {
 
 const GRID_COLUMNS: usize = 10;
 const GRID_ROWS: usize = 20;
-type GridMap = [[PieceKind; GRID_ROWS]; GRID_COLUMNS];
+type GridMap = [[PieceKind; GRID_COLUMNS]; GRID_ROWS];
 
 struct Grid {
     // Map of the entire grid
@@ -237,7 +270,8 @@ struct Grid {
 }
 
 impl Grid {
-    fn new(grid_map: GridMap) -> Self {
+    fn new() -> Self {
+        let grid_map: GridMap = [[PieceKind::None; GRID_COLUMNS]; GRID_ROWS];
         let mut widths = [0u8; GRID_ROWS];
         for row in 0..GRID_ROWS {
             widths[row] = grid_map[row]
@@ -267,20 +301,75 @@ impl Grid {
     }
 }
 
+struct GridPosition {
+    row: usize,
+    col: usize,
+}
+
+struct GameState {
+    grid: Grid,
+    active_piece: Piece,
+}
+
+impl GameState {
+    fn new() -> Self {
+        Self {
+           grid: Grid::new(),
+           active_piece: Piece::new(rand::random()),
+        }
+    }
+    
+    fn apply_gravity(&mut self) {
+        self.active_piece.position.row -= 1;
+    }
+}
+        
+impl fmt::Display for GameState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut output = String::new();
+        for y in (0..GRID_ROWS).rev() {
+            for x in 0..GRID_COLUMNS {
+                let xcord = x as i8 - self.active_piece.position.col as i8;
+                let ycord = y as i8 - self.active_piece.position.row as i8;
+                if xcord >= 0 && ycord >= 0 && self.active_piece.piece_dimensions.piece_map.contains(&(xcord as u8, ycord as u8)) {
+                    output += "#";
+                } else {
+                    match self.grid.grid_map[y][x] {
+                        PieceKind::None => output += ".",
+                        _ => output += "#",
+                    }
+                }
+            }
+            output += "\n";
+        }
+        writeln!(f, "{}", output)
+    }
+}
+
 fn main() {
-    let mut x = Piece::new(PieceKind::Z);
+    let mut gs = GameState::new();
+    println!("{}", gs);
+    gs.apply_gravity();
+    println!("{}", gs);
+    
+    gs.apply_gravity();
+    println!("{}", gs);
+    gs.apply_gravity();
+    println!("{}", gs);
+    gs.apply_gravity();
+    println!("{}", gs);
+    /* let mut x = Piece::new(PieceKind::Z);
 
     for i in 0..5 {
         println!("rot: {:?}", x.rotation);
         println!("{:?}", x);
         x.rotate_clockwise();
-    }
+    } */
 
-    /*App::new()
+    /* App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .run();
-    */
+        .run(); */
 }
 
 fn setup(
