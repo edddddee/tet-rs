@@ -57,7 +57,6 @@ enum Rotation {
 }
 
 enum Direction {
-    Up,
     Down,
     Left,
     Right,
@@ -112,7 +111,7 @@ struct PieceDimensions {
 impl PieceDimensions {
     fn new(piece_map: PieceMap) -> Self {
         Self {
-            piece_map: piece_map,
+            piece_map,
             width: Self::get_width(piece_map),
             height: Self::get_height(piece_map),
             skirt: Self::get_skirt(piece_map),
@@ -149,7 +148,6 @@ impl PieceDimensions {
 
     fn get_skirt(piece_map: PieceMap) -> Vec<i32> {
         (0..4)
-            .into_iter()
             .map(|w| {
                 piece_map
                     .iter()
@@ -251,18 +249,18 @@ impl Piece {
             },
             _ => panic!("Invalid piece type: {:?}", kind),
         };
-        let xpos = (GRID_COLUMNS as i32 / 2 - piece_dimensions.width as i32 / 2) as i32;
-        let ypos = (GRID_ROWS as i32 - piece_dimensions.height as i32);
+        let xpos = GRID_COLUMNS as i32 / 2 - piece_dimensions.width / 2;
+        let ypos = GRID_ROWS as i32 - piece_dimensions.height;
         Piece {
-            kind: kind,
+            kind,
             rotated_pieces: piece_dimensions.get_rotated_piece_maps(origin),
-            piece_dimensions: piece_dimensions,
+            piece_dimensions,
             rotation: Rotation::Rot0,
             position: GridPosition {
                 row: ypos,
                 col: xpos,
             },
-            origin: origin,
+            origin,
         }
     }
 
@@ -285,7 +283,6 @@ impl Piece {
 
     fn move_piece(&mut self, direction: Direction) {
         match direction {
-            Direction::Up => self.position.row += 1,
             Direction::Down => self.position.row -= 1,
             Direction::Left => self.position.col -= 1,
             Direction::Right => self.position.col += 1,
@@ -414,9 +411,12 @@ fn main() {
     )
     .unwrap();
 
+    let ms_per_frame = 17;
+    let ms_per_gravity_tick = 1000;
+    let mut counter = 0;
     loop {
         write!(stdout, "{}", termion::clear::All).unwrap();
-        write!(stdout, "{}", gs).unwrap();
+        write!(stdout, "{gs}").unwrap();
         /* let b = stdin.next();
         if let Some(Ok(b'q')) = b {
             break;
@@ -430,7 +430,12 @@ fn main() {
                 }
             }
         }
-        thread::sleep(Duration::from_millis(17));
+        thread::sleep(Duration::from_millis(ms_per_frame as u64));
+        counter += ms_per_frame;
+        if counter > ms_per_gravity_tick {
+            counter %= ms_per_gravity_tick;
+            gs.apply_gravity();
+        }
         write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
     }
 
