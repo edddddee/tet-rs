@@ -186,6 +186,12 @@ impl PieceDimensions {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+struct GridPosition {
+    x: i32,
+    y: i32,
+}
+
 struct Piece {
     kind: PieceKind,
     piece_dimensions: PieceDimensions,
@@ -222,31 +228,31 @@ impl Piece {
             PieceKind::I => {
                 piece_dimensions = PieceDimensions::new(PIECE_I);
                 origin = (1.5, 1.5);
-            },
+            }
             PieceKind::L => {
                 piece_dimensions = PieceDimensions::new(PIECE_L);
                 origin = (1.0, 1.0);
-            },
+            }
             PieceKind::J => {
                 piece_dimensions = PieceDimensions::new(PIECE_J);
                 origin = (1.0, 1.0);
-            },
+            }
             PieceKind::O => {
                 piece_dimensions = PieceDimensions::new(PIECE_O);
                 origin = (0.5, 0.5);
-            },
+            }
             PieceKind::S => {
                 piece_dimensions = PieceDimensions::new(PIECE_S);
                 origin = (1.0, 1.0);
-            },
+            }
             PieceKind::Z => {
                 piece_dimensions = PieceDimensions::new(PIECE_Z);
                 origin = (1.0, 1.0);
-            },
+            }
             PieceKind::T => {
                 piece_dimensions = PieceDimensions::new(PIECE_T);
                 origin = (1.0, 1.0);
-            },
+            }
             _ => panic!("Invalid piece type: {:?}", kind),
         };
         let xpos = GRID_COLUMNS as i32 / 2 - piece_dimensions.width / 2;
@@ -256,10 +262,7 @@ impl Piece {
             rotated_pieces: piece_dimensions.get_rotated_piece_maps(origin),
             piece_dimensions,
             rotation: Rotation::Rot0,
-            position: GridPosition {
-                row: ypos,
-                col: xpos,
-            },
+            position: GridPosition { x: xpos, y: ypos },
             origin,
         }
     }
@@ -283,9 +286,9 @@ impl Piece {
 
     fn move_piece(&mut self, direction: Direction) {
         match direction {
-            Direction::Down => self.position.row -= 1,
-            Direction::Left => self.position.col -= 1,
-            Direction::Right => self.position.col += 1,
+            Direction::Down => self.position.y -= 1,
+            Direction::Left => self.position.x -= 1,
+            Direction::Right => self.position.x += 1,
         }
     }
 }
@@ -319,11 +322,10 @@ impl Grid {
 
         let mut heights = [0i32; GRID_COLUMNS];
         for column in 0..GRID_COLUMNS {
-            for row in 0..GRID_ROWS {
-                heights[column] += if grid_map[row][column] == PieceKind::None {
-                    0
-                } else {
-                    1
+            for row in (0..GRID_ROWS).rev() {
+                if grid_map[row][column] != PieceKind::None {
+                    heights[column] = row as i32;
+                    break;
                 };
             }
         }
@@ -333,11 +335,16 @@ impl Grid {
             heights,
         }
     }
-}
 
-struct GridPosition {
-    row: i32,
-    col: i32,
+    fn is_within_bounds(x: i32, y: i32) -> bool {
+        0 <= x && x < GRID_COLUMNS as i32 && 0 <= y && y < GRID_ROWS as i32
+    }
+
+    fn set_cell(&mut self, x: i32, y: i32, kind: PieceKind) {
+        if Self::is_within_bounds(x, y) {
+            self.grid_map[y as usize][x as usize] = kind;
+        } 
+    }
 }
 
 struct GameState {
@@ -354,7 +361,17 @@ impl GameState {
     }
 
     fn apply_gravity(&mut self) {
-        self.active_piece.position.row -= 1;
+        self.active_piece.position.y -= 1;
+    }
+
+    fn freeze_piece(&mut self) {
+        let (x, y) = (self.active_piece.position.x, self.active_piece.position.y);
+        self.active_piece
+            .piece_dimensions
+            .piece_map
+            .iter()
+            .for_each(|(px, py)| self.grid.set_cell(x + px, y + py, self.active_piece.kind));
+        self.active_piece = Piece::new(rand::random());
     }
 }
 
@@ -363,8 +380,8 @@ impl fmt::Display for GameState {
         let mut output = String::new();
         for y in (0..GRID_ROWS).rev() {
             for x in 0..GRID_COLUMNS {
-                let xcord = x as i8 - self.active_piece.position.col as i8;
-                let ycord = y as i8 - self.active_piece.position.row as i8;
+                let xcord = x as i8 - self.active_piece.position.x as i8;
+                let ycord = y as i8 - self.active_piece.position.y as i8;
                 if xcord >= 0
                     && ycord >= 0
                     && self
@@ -394,6 +411,7 @@ fn handle_keyboard_input(key: Key, gs: &mut GameState) {
         Key::Left => gs.active_piece.move_piece(Direction::Left),
         Key::Right => gs.active_piece.move_piece(Direction::Right),
         Key::Char('n') => gs.active_piece = Piece::new(rand::random()),
+        Key::Char(' ') => gs.freeze_piece(),
         _ => (),
     };
 }
