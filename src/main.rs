@@ -118,42 +118,53 @@ impl PieceDimensions {
         }
     }
 
-    fn get_width(piece_map: PieceMap) -> i32 {
+    fn x_min(piece_map: PieceMap) -> i32 {
+        piece_map
+            .iter()
+            .min_by(|(x1, _), (x2, _)| x1.cmp(x2))
+            .unwrap()
+            .0
+    }
+
+    fn x_max(piece_map: PieceMap) -> i32 {
         piece_map
             .iter()
             .max_by(|(x1, _), (x2, _)| x1.cmp(x2))
             .unwrap()
             .0
-            - piece_map
-                .iter()
-                .min_by(|(x1, _), (x2, _)| x1.cmp(x2))
-                .unwrap()
-                .0
-            + 1
+    }
+
+    fn y_min(piece_map: PieceMap) -> i32 {
+        piece_map
+            .iter()
+            .min_by(|(_, y1), (_, y2)| y1.cmp(y2))
+            .unwrap()
+            .0
+    }
+
+    fn y_max(piece_map: PieceMap) -> i32 {
+        piece_map
+            .iter()
+            .max_by(|(y1, _), (_, y2)| y1.cmp(y2))
+            .unwrap()
+            .0
+    }
+    fn get_width(piece_map: PieceMap) -> i32 {
+        Self::x_max(piece_map) - Self::x_min(piece_map) + 1
     }
 
     fn get_height(piece_map: PieceMap) -> i32 {
-        piece_map
-            .iter()
-            .max_by(|(y1, _), (y2, _)| y1.cmp(y2))
-            .unwrap()
-            .0
-            - piece_map
-                .iter()
-                .min_by(|(y1, _), (y2, _)| y1.cmp(y2))
-                .unwrap()
-                .0
-            + 1
+        Self::y_max(piece_map) - Self::y_min(piece_map) + 1
     }
 
     fn get_skirt(piece_map: PieceMap) -> Vec<i32> {
-        (0..4)
+        (Self::x_min(piece_map)..=Self::x_max(piece_map))
             .map(|w| {
                 piece_map
                     .iter()
                     .filter(|(x, _)| *x == w)
                     .min_by(|(_, y1), (_, y2)| y1.cmp(y2))
-                    .unwrap_or(&(w, Self::get_height(piece_map)))
+                    .unwrap()
                     .1
             })
             .collect()
@@ -300,18 +311,28 @@ type GridMap = [[PieceKind; GRID_COLUMNS]; GRID_ROWS];
 struct Grid {
     // Map of the entire grid
     grid_map: GridMap,
-    // Keeps track on when a line gets filled
-    widths: [i32; GRID_ROWS],
-    // Keeps track of the highest piece in each column
-    heights: [i32; GRID_COLUMNS],
 }
 
 impl Grid {
     fn new() -> Self {
         let grid_map: GridMap = [[PieceKind::None; GRID_COLUMNS]; GRID_ROWS];
-        let mut widths = [0i32; GRID_ROWS];
+
+        // let mut heights = [0i32; GRID_COLUMNS];
+        // for column in 0..GRID_COLUMNS {
+        //     for row in (0..GRID_ROWS).rev() {
+        //         if grid_map[row][column] != PieceKind::None {
+        //             heights[column] = row as i32;
+        //             break;
+        //         };
+        //     }
+        // }
+        Self { grid_map }
+    }
+
+    fn widths(&self) -> [i32; GRID_ROWS] {
+        let mut result = [0i32; GRID_ROWS];
         for row in 0..GRID_ROWS {
-            widths[row] = grid_map[row]
+            result[row] = self.grid_map[row]
                 .iter()
                 .map(|kind| match kind {
                     PieceKind::None => 0,
@@ -319,21 +340,20 @@ impl Grid {
                 })
                 .sum();
         }
+        result
+    }
 
-        let mut heights = [0i32; GRID_COLUMNS];
-        for column in 0..GRID_COLUMNS {
-            for row in (0..GRID_ROWS).rev() {
-                if grid_map[row][column] != PieceKind::None {
-                    heights[column] = row as i32;
-                    break;
-                };
-            }
-        }
-        Self {
-            grid_map,
-            widths,
-            heights,
-        }
+    fn heights(&self, below_row: i32) -> [i32; GRID_COLUMNS] {
+        let mut result = [0i32; GRID_COLUMNS];
+        (0..GRID_COLUMNS).for_each(|col| {
+            result[col] = (0..below_row)
+                .rev()
+                .skip_while(|row| self.grid_map[*row as usize][col] == PieceKind::None)
+                .map(|row| row + 1)
+                .next()
+                .unwrap_or(0) as i32
+        });
+        return result;
     }
 
     fn is_within_bounds(x: i32, y: i32) -> bool {
@@ -343,7 +363,7 @@ impl Grid {
     fn set_cell(&mut self, x: i32, y: i32, kind: PieceKind) {
         if Self::is_within_bounds(x, y) {
             self.grid_map[y as usize][x as usize] = kind;
-        } 
+        }
     }
 }
 
@@ -372,6 +392,21 @@ impl GameState {
             .iter()
             .for_each(|(px, py)| self.grid.set_cell(x + px, y + py, self.active_piece.kind));
         self.active_piece = Piece::new(rand::random());
+    }
+
+    fn drop_piece(&mut self) {
+        let (x, y) = (self.active_piece.position.x, self.active_piece.position.y);
+        let xmin = PieceDimensions::x_min(self.active_piece.piece_dimensions.piece_map);
+        let y_drop: i32 = (0..self.active_piece.piece_dimensions.width)
+            .filter(|w| 0 <= (x + w + xmin) && (x + w + xmin) < GRID_COLUMNS as i32)
+            .map(|w| {
+                self.active_piece.piece_dimensions.skirt[w as usize] + y
+                    - self.grid.heights(y + PieceDimensions::y_min(self.active_piece.piece_dimensions.piece_map))[(x + w + xmin) as usize]
+            })
+            .min()
+            .unwrap();
+        self.active_piece.position.y -= y_drop;
+        self.freeze_piece();
     }
 }
 
@@ -411,7 +446,7 @@ fn handle_keyboard_input(key: Key, gs: &mut GameState) {
         Key::Left => gs.active_piece.move_piece(Direction::Left),
         Key::Right => gs.active_piece.move_piece(Direction::Right),
         Key::Char('n') => gs.active_piece = Piece::new(rand::random()),
-        Key::Char(' ') => gs.freeze_piece(),
+        Key::Char(' ') => gs.drop_piece(),
         _ => (),
     };
 }
@@ -453,6 +488,10 @@ fn main() {
         if counter > ms_per_gravity_tick {
             counter %= ms_per_gravity_tick;
             gs.apply_gravity();
+        }
+        write!(stdout, "\r\n").unwrap();
+        for col in 0..GRID_COLUMNS {
+            write!(stdout, "{}", gs.grid.heights(GRID_ROWS as i32)[col]).unwrap();
         }
         write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
     }
