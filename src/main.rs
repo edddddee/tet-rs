@@ -9,6 +9,7 @@ use std::mem;
 use std::thread;
 use std::time::Duration;
 use termion::async_stdin;
+use termion::color;
 use termion::event::{parse_event, Event, Key};
 use termion::raw::IntoRawMode;
 
@@ -101,6 +102,7 @@ impl std::ops::SubAssign for Rotation {
     }
 }
 
+#[derive(Debug, Clone)]
 struct PieceDimensions {
     piece_map: PieceMap,
     width: i32,
@@ -203,6 +205,7 @@ struct GridPosition {
     y: i32,
 }
 
+#[derive(Clone)]
 struct Piece {
     kind: PieceKind,
     piece_dimensions: PieceDimensions,
@@ -308,6 +311,7 @@ const GRID_COLUMNS: usize = 10;
 const GRID_ROWS: usize = 20;
 type GridMap = [[PieceKind; GRID_COLUMNS]; GRID_ROWS];
 
+#[derive(Debug, Clone)]
 struct Grid {
     // Map of the entire grid
     grid_map: GridMap,
@@ -348,6 +352,7 @@ impl Grid {
         (0..GRID_COLUMNS).for_each(|col| {
             result[col] = (0..below_row)
                 .rev()
+                .skip_while(|row| *row >= GRID_ROWS as i32)
                 .skip_while(|row| self.grid_map[*row as usize][col] == PieceKind::None)
                 .map(|row| row + 1)
                 .next()
@@ -365,8 +370,24 @@ impl Grid {
             self.grid_map[y as usize][x as usize] = kind;
         }
     }
+
+    fn get_cell(&self, x: i32, y: i32) -> PieceKind {
+        assert!(
+            Self::is_within_bounds(x, y),
+            "({}, {}) is not on the grid!",
+            x,
+            y
+        );
+        self.grid_map[y as usize][x as usize]
+    }
+
+    fn clear_row(&mut self, row: usize) {
+        assert!(0 <= row && row < GRID_ROWS, "Row {} out of bounds", row);
+        (0..GRID_COLUMNS).for_each(|col| self.grid_map[row][col] = PieceKind::None)
+    }
 }
 
+#[derive(Debug, Clone)]
 struct GameState {
     grid: Grid,
     active_piece: Piece,
@@ -381,7 +402,11 @@ impl GameState {
     }
 
     fn apply_gravity(&mut self) {
-        self.active_piece.position.y -= 1;
+        if self.distance_to_drop() == 0 {
+            self.freeze_piece();
+        } else {
+            self.active_piece.position.y -= 1;
+        }
     }
 
     fn freeze_piece(&mut self) {
@@ -394,19 +419,62 @@ impl GameState {
         self.active_piece = Piece::new(rand::random());
     }
 
-    fn drop_piece(&mut self) {
+    fn clear_full_rows(&mut self) {
+        let mut rows_to_clear: i32 = 0;
+        let mut new_gs = self.clone();
+        let drop_amounts: Vec<_> = self
+            .grid
+            .widths()
+            .iter()
+            .enumerate()
+            .map(|(row, w)| {
+                if *w == GRID_COLUMNS as i32 {
+                    new_gs.grid.clear_row(row);
+                    rows_to_clear += 1;
+                    0
+                } else {
+                    rows_to_clear
+                }
+            })
+            .collect();
+        drop_amounts
+            .into_iter()
+            .enumerate()
+            .filter(|(_, drop_amt)| *drop_amt > 0)
+            .for_each(|(row, drop_amt)| {
+                (0..GRID_COLUMNS).for_each(|col| {
+                    new_gs.grid.set_cell(
+                        col as i32,
+                        row as i32 - drop_amt,
+                        self.grid.get_cell(col as i32, row as i32),
+                    )
+                })
+            });
+        *self = new_gs;
+    }
+
+    fn distance_to_drop(&self) -> i32 {
         let (x, y) = (self.active_piece.position.x, self.active_piece.position.y);
         let xmin = PieceDimensions::x_min(self.active_piece.piece_dimensions.piece_map);
-        let y_drop: i32 = (0..self.active_piece.piece_dimensions.width)
+        (0..self.active_piece.piece_dimensions.width)
             .filter(|w| 0 <= (x + w + xmin) && (x + w + xmin) < GRID_COLUMNS as i32)
             .map(|w| {
                 self.active_piece.piece_dimensions.skirt[w as usize] + y
-                    - self.grid.heights(y + PieceDimensions::y_min(self.active_piece.piece_dimensions.piece_map))[(x + w + xmin) as usize]
+                    - self.grid.heights(
+                        y + PieceDimensions::y_min(self.active_piece.piece_dimensions.piece_map),
+                    )[(x + w + xmin) as usize]
             })
             .min()
-            .unwrap();
-        self.active_piece.position.y -= y_drop;
+            .unwrap()
+    }
+
+    fn drop_piece(&mut self) {
+        self.active_piece.position.y -= self.distance_to_drop();
         self.freeze_piece();
+    }
+
+    fn on_update(&mut self) {
+        self.clear_full_rows();
     }
 }
 
@@ -468,12 +536,13 @@ fn main() {
     let ms_per_gravity_tick = 1000;
     let mut counter = 0;
     loop {
-        write!(stdout, "{}", termion::clear::All).unwrap();
-        write!(stdout, "{gs}").unwrap();
-        /* let b = stdin.next();
-        if let Some(Ok(b'q')) = b {
-            break;
-        } */
+        // Clear screen and hide cursor
+        write!(stdout, "{}{}", termion::clear::All, termion::cursor::Hide).unwrap();
+
+        // Print the game (grid and active piece)
+        write!(stdout, "{}{gs}", color::Fg(color::LightWhite)).unwrap();
+
+        // Poll events and handle keyboard input
         if let Some(Ok(b)) = stdin.next() {
             if let Ok(Event::Key(key)) = parse_event(b, &mut stdin) {
                 if let Key::Char('q') = key {
@@ -483,17 +552,19 @@ fn main() {
                 }
             }
         }
+
+        // Wait ms_per_frame milliseconds before applying gravity
         thread::sleep(Duration::from_millis(ms_per_frame as u64));
         counter += ms_per_frame;
+
         if counter > ms_per_gravity_tick {
             counter %= ms_per_gravity_tick;
             gs.apply_gravity();
         }
-        write!(stdout, "\r\n").unwrap();
-        for col in 0..GRID_COLUMNS {
-            write!(stdout, "{}", gs.grid.heights(GRID_ROWS as i32)[col]).unwrap();
-        }
+        gs.clear_full_rows();
+
         write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
+        stdout.flush().unwrap();
     }
 
     /* App::new()
