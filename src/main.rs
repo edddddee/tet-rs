@@ -26,7 +26,11 @@ impl GameState {
     }
 
     fn apply_gravity(&mut self) {
-        self.active_piece.move_piece(Direction::Down);
+        if self.distance_to_drop() == 0 {
+            self.freeze_piece();
+        } else {
+            self.active_piece.move_piece(Direction::Down);
+        }
     }
 
     fn freeze_piece(&mut self) {
@@ -80,9 +84,10 @@ impl GameState {
             .filter(|w| 0 <= (x + w + xmin) && (x + w + xmin) < GRID_COLUMNS as i32)
             .map(|w| {
                 self.active_piece.piece_dimensions.skirt[w as usize] + y
-                    - self.grid.heights(
-                        y + PieceDimensions::y_min(self.active_piece.piece_dimensions.piece_map),
-                    )[(x + w + xmin) as usize]
+                    - self
+                        .grid
+                        .heights(self.active_piece.piece_dimensions.skirt[w as usize] + y)
+                        [(x + w + xmin) as usize]
             })
             .min()
             .unwrap()
@@ -159,7 +164,7 @@ fn main() {
     .unwrap();
 
     let ms_per_frame = 17;
-    let ms_per_gravity_tick = 1000;
+    let ms_per_gravity_tick = 9999999;
     let mut counter = 0;
     loop {
         // Clear screen and hide cursor
@@ -189,6 +194,7 @@ fn main() {
         }
         gs.on_update();
 
+        write!(stdout, "{}", gs.distance_to_drop()).unwrap();
         write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
         stdout.flush().unwrap();
     }
