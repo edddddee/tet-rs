@@ -1,3 +1,5 @@
+use termion::color;
+
 use crate::grid::{GRID_COLUMNS, GRID_ROWS};
 use crate::utils::{Direction, Rotation};
 
@@ -28,6 +30,23 @@ pub enum PieceKind {
     T,
     Z,
     None,
+}
+
+const BLOCK_STR: &str = "■";
+
+impl fmt::Display for PieceKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PieceKind::I => write!(f, "{}{}",  color::Fg(color::LightBlue), BLOCK_STR),
+            PieceKind::J => write!(f, "{}{}",  color::Fg(color::Rgb(75, 0, 130)), BLOCK_STR),
+            PieceKind::L => write!(f, "{}{}",  color::Fg(color::Rgb(255, 140, 0)), BLOCK_STR),
+            PieceKind::O => write!(f, "{}{}",  color::Fg(color::Yellow), BLOCK_STR),
+            PieceKind::S => write!(f, "{}{}",  color::Fg(color::LightGreen), BLOCK_STR),
+            PieceKind::T=> write!(f, "{}{}",  color::Fg(color::Magenta), BLOCK_STR),
+            PieceKind::Z => write!(f, "{}{}", color::Fg(color::Red), BLOCK_STR),
+            PieceKind::None => write!(f, "{}{}", color::Fg(color::LightWhite), BLOCK_STR),
+        }
+    }
 }
 
 impl Distribution<PieceKind> for Standard {
@@ -212,7 +231,7 @@ impl Piece {
             _ => panic!("Invalid piece type: {:?}", kind),
         };
         let xpos = GRID_COLUMNS as i32 / 2 - piece_dimensions.width / 2;
-        let ypos = GRID_ROWS as i32 - piece_dimensions.height;
+        let ypos = 20 - PieceDimensions::y_min(piece_dimensions.piece_map);
         Piece {
             kind,
             rotated_pieces: piece_dimensions.get_rotated_piece_maps(origin),

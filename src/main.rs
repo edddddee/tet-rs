@@ -43,7 +43,7 @@ fn main() {
     .unwrap();
 
     let ms_per_frame = 17;
-    let ms_per_gravity_tick = 9999999;
+    let ms_per_gravity_tick = 1000;
     let mut counter = 0;
     loop {
         // Clear screen and hide cursor
@@ -73,13 +73,7 @@ fn main() {
         }
         gs.on_update();
 
-        write!(stdout, "{}", gs.distance_to_drop()).unwrap();
         write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
         stdout.flush().unwrap();
     }
-
-    /* App::new()
-    .add_plugins(DefaultPlugins)
-    .add_systems(Startup, setup)
-    .run(); */
 }

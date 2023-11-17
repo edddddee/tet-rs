@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::utils::Direction;
 use crate::grid::{GRID_ROWS, GRID_COLUMNS, Grid};
-use crate::piece::{Piece, PieceDimensions, PieceKind};
+use crate::piece::{Piece, PieceDimensions};
 
 #[derive(Debug, Clone)]
 pub struct GameState {
@@ -101,7 +101,6 @@ impl GameState {
 
 impl fmt::Display for GameState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut output = String::new();
         for y in (0..GRID_ROWS).rev() {
             for x in 0..GRID_COLUMNS {
                 let xcord = x as i8 - self.active_piece.position.x as i8;
@@ -114,16 +113,13 @@ impl fmt::Display for GameState {
                         .piece_map
                         .contains(&(xcord as i32, ycord as i32))
                 {
-                    output += "#";
+                    write!(f, "{}", self.active_piece.kind)?;
                 } else {
-                    match self.grid.grid_map[y][x] {
-                        PieceKind::None => output += ".",
-                        _ => output += "#",
-                    }
+                    write!(f, "{}", self.grid.grid_map[y][x])?;
                 }
             }
-            output += "\r\n";
+            write!(f, "\r\n")?;
         }
-        writeln!(f, "{}", output)
+        Ok(())
     }
 }
