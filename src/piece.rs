@@ -1,9 +1,12 @@
-use crate::utils::{Rotation, Direction};
-use crate::grid::{GRID_ROWS, GRID_COLUMNS};
+use crate::grid::{GRID_COLUMNS, GRID_ROWS};
+use crate::utils::{Direction, Rotation};
 
-use std::mem;
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
 use std::fmt;
-use rand::{Rng, distributions::{Distribution, Standard}};
+use std::mem;
 
 type PieceMap = [(i32, i32); 4];
 // Bit masks for each piece kind in its initial (unrotated) state.
@@ -244,4 +247,3 @@ impl Piece {
         }
     }
 }
-

@@ -7,9 +7,9 @@ use termion::color;
 use termion::event::{parse_event, Event, Key};
 use termion::raw::IntoRawMode;
 
-pub use tetris::utils::*;
-pub use tetris::piece::*;
 pub use tetris::grid::*;
+pub use tetris::piece::*;
+pub use tetris::utils::*;
 
 #[derive(Debug, Clone)]
 struct GameState {
@@ -26,11 +26,7 @@ impl GameState {
     }
 
     fn apply_gravity(&mut self) {
-        if self.distance_to_drop() == 0 {
-            self.freeze_piece();
-        } else {
-            self.active_piece.position.y -= 1;
-        }
+        self.active_piece.move_piece(Direction::Down);
     }
 
     fn freeze_piece(&mut self) {
@@ -134,7 +130,13 @@ impl fmt::Display for GameState {
 fn handle_keyboard_input(key: Key, gs: &mut GameState) {
     match key {
         Key::Up => gs.active_piece.rotate_clockwise(),
-        Key::Down => gs.active_piece.move_piece(Direction::Down),
+        Key::Down => {
+            if gs.distance_to_drop() == 0 {
+                gs.freeze_piece();
+            } else {
+                gs.active_piece.move_piece(Direction::Down);
+            }
+        }
         Key::Left => gs.active_piece.move_piece(Direction::Left),
         Key::Right => gs.active_piece.move_piece(Direction::Right),
         Key::Char('n') => gs.active_piece = Piece::new(rand::random()),
@@ -185,7 +187,7 @@ fn main() {
             counter %= ms_per_gravity_tick;
             gs.apply_gravity();
         }
-        gs.clear_full_rows();
+        gs.on_update();
 
         write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
         stdout.flush().unwrap();

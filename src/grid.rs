@@ -13,7 +13,9 @@ pub struct Grid {
 
 impl Default for Grid {
     fn default() -> Self {
-        Self { grid_map: [[PieceKind::None; GRID_COLUMNS]; GRID_ROWS] }
+        Self {
+            grid_map: [[PieceKind::None; GRID_COLUMNS]; GRID_ROWS],
+        }
     }
 }
 

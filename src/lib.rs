@@ -1,3 +1,3 @@
-pub mod utils;
-pub mod piece;
 pub mod grid;
+pub mod piece;
+pub mod utils;
