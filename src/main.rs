@@ -382,7 +382,7 @@ impl Grid {
     }
 
     fn clear_row(&mut self, row: usize) {
-        assert!(0 <= row && row < GRID_ROWS, "Row {} out of bounds", row);
+        assert!(row < GRID_ROWS, "Row {} out of bounds", row);
         (0..GRID_COLUMNS).for_each(|col| self.grid_map[row][col] = PieceKind::None)
     }
 }
