@@ -1,13 +1,15 @@
 use std::fmt;
 
-use crate::utils::Direction;
-use crate::grid::{GRID_ROWS, GRID_COLUMNS, Grid};
-use crate::piece::{Piece, PieceDimensions};
+use crate::controls::Button;
+use crate::grid::{Grid, GRID_COLUMNS, GRID_ROWS};
+use crate::piece::{Piece, PieceDimensions, PieceKind};
+use crate::utils::{Direction, Rotation, MovementError};
 
 #[derive(Debug, Clone)]
 pub struct GameState {
     pub grid: Grid,
     pub active_piece: Piece,
+    pub is_running: bool,
 }
 
 impl Default for GameState {
@@ -15,17 +17,16 @@ impl Default for GameState {
         Self {
             grid: Grid::default(),
             active_piece: Piece::new(rand::random()),
+            is_running: true,
         }
     }
-
 }
 
 impl GameState {
     pub fn apply_gravity(&mut self) {
-        if self.distance_to_drop() == 0 {
-            self.freeze_piece();
-        } else {
-            self.active_piece.move_piece(Direction::Down);
+        match self.distance_to_drop() {
+            0 => self.freeze_piece(),
+            _ => self.active_piece.move_piece(Direction::Down),
         }
     }
 
@@ -96,6 +97,102 @@ impl GameState {
 
     pub fn on_update(&mut self) {
         self.clear_full_rows();
+    }
+
+    fn is_valid_move(&self, dir: Direction) -> bool {
+        let (dx, dy): (i32, i32) = match dir {
+            Direction::Left => (-1, 0),
+            Direction::Right => (1, 0),
+            Direction::Down => (0, -1),
+        };
+        for (rx, ry) in self.active_piece.piece_dimensions.piece_map {
+            let (x, y) = (
+                self.active_piece.position.x + rx + dx,
+                self.active_piece.position.y + ry + dy,
+            );
+            if !(Grid::is_within_bounds(x, y) && self.grid.get_cell(x, y) == PieceKind::None) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn try_move(&mut self, dir: Direction) {
+        if self.is_valid_move(dir) {
+            self.active_piece.move_piece(dir)
+        }
+    }
+
+    fn is_valid_rotation(&self, rot: Rotation, offset: (i32, i32)) -> bool {
+        let rotated_piecemap = self.active_piece.rotated_pieces[(self.active_piece.rotation + rot) as usize];
+        
+        for (rx, ry) in rotated_piecemap {
+            let (x, y) = (
+                self.active_piece.position.x + rx + offset.0,
+                self.active_piece.position.y + ry + offset.1,
+            );
+            if !(Grid::is_within_bounds(x, y) && self.grid.get_cell(x, y) == PieceKind::None) {
+                return false;
+            }
+        }
+        true
+    }
+
+    pub fn try_rotate(&mut self, rot: Rotation) -> Result<(), MovementError> {
+        let transition = (self.active_piece.rotation, (self.active_piece.rotation + rot));
+
+        let offset_list = match self.active_piece.kind {
+            PieceKind::I => {
+                match transition {
+                    (Rotation::Rot0, Rotation::Rot90) => [(-2, 0), (1, 0), (-2, -1), (1, 2)],
+                    (Rotation::Rot90, Rotation::Rot0) => [(2, 0), (-1, 0), (2, 1), (-1, -2)],
+                    (Rotation::Rot90, Rotation::Rot180) => [(-1, 0), (2, 0), (-1, 2), (2, -1)],
+                    (Rotation::Rot180, Rotation::Rot90) => [(1, 0), (-2, 0), (1, -2), (-2, 1)],
+                    (Rotation::Rot180, Rotation::Rot270) => [(2, 0), (-1, 0), (2, 1), (-1, -2)],
+                    (Rotation::Rot270, Rotation::Rot180) => [(-2, 0), (1, 0), (-2, -1), (1, 2)],
+                    (Rotation::Rot270, Rotation::Rot0) => [(1, 0), (-2, 0), (1, -2), (-2, 1)],
+                    (Rotation::Rot0, Rotation::Rot270) => [(-1, 0), (2, 0), (-1, 2), (2, -1)],
+                     _ => return Err(MovementError::RotationError),
+                }
+            }
+            _ => {
+                match transition {
+                     (Rotation::Rot0, Rotation::Rot90) => [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
+                     (Rotation::Rot90, Rotation::Rot0) => [(1, 0), (1, -1), (0, 2), (1, 2)],
+                     (Rotation::Rot90, Rotation::Rot180) => [(1, 0), (1, -1), (0, 2), (1, 2)],
+                     (Rotation::Rot180, Rotation::Rot90) => [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
+                     (Rotation::Rot180, Rotation::Rot270) => [(1, 0), (1, 1), (0, -2), (1, -2)],
+                     (Rotation::Rot270, Rotation::Rot180) => [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
+                     (Rotation::Rot270, Rotation::Rot0) => [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
+                     (Rotation::Rot0, Rotation::Rot270) => [(1, 0), (1, 1), (0, -2), (1, -2)],
+                     _ => return Err(MovementError::RotationError),
+                }
+            }
+        };
+        if self.is_valid_rotation(rot, (0,0)) {
+            self.active_piece.rotate(rot)
+        } else {
+            for offset in offset_list {
+                if self.is_valid_rotation(rot, offset) {
+                    self.active_piece.position.x += offset.0;
+                    self.active_piece.position.y += offset.1;
+                    self.active_piece.rotate(rot);
+                    break;
+                }
+            }
+        };
+        Ok(())
+    }
+
+    pub fn handle_button_input(&mut self, button: Button) {
+        match button {
+            Button::Quit => self.is_running = false,
+            Button::MoveDown => self.try_move(Direction::Down),
+            Button::MoveLeft => self.try_move(Direction::Left),
+            Button::MoveRight => self.try_move(Direction::Right),
+            Button::Drop => self.drop_piece(),
+            Button::RotateClockwise => self.try_rotate(Rotation::Rot90).unwrap_or(()),
+        };
     }
 }
 

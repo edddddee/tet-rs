@@ -48,7 +48,7 @@ impl Grid {
         return result;
     }
 
-    fn is_within_bounds(x: i32, y: i32) -> bool {
+    pub fn is_within_bounds(x: i32, y: i32) -> bool {
         0 <= x && x < GRID_COLUMNS as i32 && 0 <= y && y < GRID_ROWS as i32
     }
 

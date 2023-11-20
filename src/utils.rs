@@ -8,6 +8,7 @@ pub enum Rotation {
     Rot270,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Direction {
     Down,
     Left,
@@ -51,4 +52,9 @@ impl std::ops::SubAssign for Rotation {
     fn sub_assign(&mut self, rhs: Self) {
         *self = Self::try_from((*self as i32 - rhs as i32).rem_euclid(4)).unwrap()
     }
+}
+
+
+pub enum MovementError {
+    RotationError
 }

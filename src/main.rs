@@ -6,6 +6,7 @@ use termion::color;
 use termion::event::{parse_event, Event, Key};
 use termion::raw::IntoRawMode;
 
+use tetris::controls::{Controller, Button};
 pub use tetris::grid::*;
 pub use tetris::piece::*;
 pub use tetris::utils::*;
@@ -29,11 +30,30 @@ fn handle_keyboard_input(key: Key, gs: &mut GameState) {
     };
 }
 
+struct TerminalGame(GameState);
+
+impl Controller for TerminalGame {
+    type Key = Key;
+
+    fn key_to_button(&mut self, key: Self::Key) -> Option<Button> {
+        match key {
+            Key::Up => Some(Button::RotateClockwise),
+            Key::Left => Some(Button::MoveLeft),
+            Key::Right => Some(Button::MoveRight),
+            Key::Down => Some(Button::MoveDown),
+            Key::Char(' ') => Some(Button::Drop),
+            Key::Char('q') => Some(Button::Quit),
+            _ => None,
+        }
+    }
+}
+
+
 fn main() {
     let stdout = stdout();
     let mut stdout = stdout.lock().into_raw_mode().unwrap();
     let mut stdin = async_stdin().bytes();
-    let mut gs = GameState::default();
+    let mut game = TerminalGame(GameState::default());
     write!(
         stdout,
         "{}{}",
@@ -46,22 +66,25 @@ fn main() {
     let ms_per_gravity_tick = 1000;
     let mut counter = 0;
     loop {
+        if !game.0.is_running {
+            break;
+        }
+        write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
         // Clear screen and hide cursor
         write!(stdout, "{}{}", termion::clear::All, termion::cursor::Hide).unwrap();
 
         // Print the game (grid and active piece)
-        write!(stdout, "{}{gs}", color::Fg(color::LightWhite)).unwrap();
+        write!(stdout, "{}{}", color::Fg(color::LightWhite), game.0).unwrap();
 
         // Poll events and handle keyboard input
         if let Some(Ok(b)) = stdin.next() {
             if let Ok(Event::Key(key)) = parse_event(b, &mut stdin) {
-                if let Key::Char('q') = key {
-                    break;
-                } else {
-                    handle_keyboard_input(key, &mut gs);
-                }
+                    if let Some(button) = game.key_to_button(key) {
+                        game.0.handle_button_input(button);
+                    }
             }
         }
+        
 
         // Wait ms_per_frame milliseconds before applying gravity
         thread::sleep(Duration::from_millis(ms_per_frame as u64));
@@ -69,11 +92,10 @@ fn main() {
 
         if counter > ms_per_gravity_tick {
             counter %= ms_per_gravity_tick;
-            gs.apply_gravity();
+            game.0.apply_gravity();
         }
-        gs.on_update();
+        game.0.on_update();
 
-        write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
         stdout.flush().unwrap();
     }
 }
