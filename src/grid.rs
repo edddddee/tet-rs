@@ -1,4 +1,4 @@
-use crate::piece::PieceKind;
+use crate::piece::{Piece, PieceKind, PieceDimensions};
 
 pub const GRID_COLUMNS: usize = 10;
 pub const GRID_ROWS: usize = 20;
@@ -50,6 +50,10 @@ impl Grid {
 
     pub fn is_within_bounds(x: i32, y: i32) -> bool {
         0 <= x && x < GRID_COLUMNS as i32 && 0 <= y && y < GRID_ROWS as i32
+    }
+
+    pub fn is_rect_inside(x_min: i32, x_max: i32, y_min: i32, y_max: i32) -> bool {
+        0 <= x_min && x_max < GRID_COLUMNS as i32 && 0 <= y_min && y_max < GRID_ROWS as i32
     }
 
     pub fn set_cell(&mut self, x: i32, y: i32, kind: PieceKind) {

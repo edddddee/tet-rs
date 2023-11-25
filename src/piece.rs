@@ -17,7 +17,7 @@ const PIECE_J: PieceMap = [(0, 1), (1, 1), (2, 1), (2, 0)];
 const PIECE_L: PieceMap = [(0, 0), (0, 1), (1, 1), (2, 1)];
 const PIECE_O: PieceMap = [(0, 0), (1, 0), (0, 1), (1, 1)];
 const PIECE_S: PieceMap = [(0, 0), (1, 0), (1, 1), (2, 1)];
-const PIECE_T: PieceMap = [(0, 0), (1, 0), (2, 0), (1, 1)];
+const PIECE_T: PieceMap = [(0, 1), (1, 1), (2, 1), (1, 2)];
 const PIECE_Z: PieceMap = [(1, 0), (2, 0), (0, 1), (1, 1)];
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -37,12 +37,12 @@ const BLOCK_STR: &str = "■";
 impl fmt::Display for PieceKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PieceKind::I => write!(f, "{}{}",  color::Fg(color::LightBlue), BLOCK_STR),
-            PieceKind::J => write!(f, "{}{}",  color::Fg(color::Rgb(75, 0, 130)), BLOCK_STR),
-            PieceKind::L => write!(f, "{}{}",  color::Fg(color::Rgb(255, 140, 0)), BLOCK_STR),
-            PieceKind::O => write!(f, "{}{}",  color::Fg(color::Yellow), BLOCK_STR),
-            PieceKind::S => write!(f, "{}{}",  color::Fg(color::LightGreen), BLOCK_STR),
-            PieceKind::T=> write!(f, "{}{}",  color::Fg(color::Magenta), BLOCK_STR),
+            PieceKind::I => write!(f, "{}{}", color::Fg(color::LightBlue), BLOCK_STR),
+            PieceKind::J => write!(f, "{}{}", color::Fg(color::Rgb(75, 0, 130)), BLOCK_STR),
+            PieceKind::L => write!(f, "{}{}", color::Fg(color::Rgb(255, 140, 0)), BLOCK_STR),
+            PieceKind::O => write!(f, "{}{}", color::Fg(color::Yellow), BLOCK_STR),
+            PieceKind::S => write!(f, "{}{}", color::Fg(color::LightGreen), BLOCK_STR),
+            PieceKind::T => write!(f, "{}{}", color::Fg(color::Magenta), BLOCK_STR),
             PieceKind::Z => write!(f, "{}{}", color::Fg(color::Red), BLOCK_STR),
             PieceKind::None => write!(f, "{}{}", color::Fg(color::LightWhite), BLOCK_STR),
         }
@@ -264,5 +264,18 @@ impl Piece {
             Direction::Left => self.position.x -= 1,
             Direction::Right => self.position.x += 1,
         }
+    }
+
+    pub fn x_min(&self) -> i32 {
+        self.position.x + PieceDimensions::x_min(self.piece_dimensions.piece_map)
+    }
+    pub fn y_min(&self) -> i32 {
+        self.position.y + PieceDimensions::y_min(self.piece_dimensions.piece_map)
+    }
+    pub fn x_max(&self) -> i32 {
+        self.position.x + PieceDimensions::x_max(self.piece_dimensions.piece_map)
+    }
+    pub fn y_max(&self) -> i32 {
+        self.position.y + PieceDimensions::y_max(self.piece_dimensions.piece_map)
     }
 }
