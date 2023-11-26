@@ -1,3 +1,4 @@
+#[derive(Clone, Copy, Debug)]
 pub enum Button {
     MoveDown,
     MoveLeft,
@@ -10,5 +11,5 @@ pub enum Button {
 pub trait Controller {
     type Key;
 
-    fn key_to_button(&mut self, key: Self::Key) -> Option<Button>;
+    fn key_to_button(&self, key: Self::Key) -> Option<Button>;
 }

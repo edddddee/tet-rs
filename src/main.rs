@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::{stdout, Read, Write};
 use std::thread;
 use std::time::Duration;
@@ -6,11 +7,11 @@ use termion::color;
 use termion::event::{parse_event, Event, Key};
 use termion::raw::IntoRawMode;
 
-use tetris::controls::{Controller, Button};
+use tetris::controls::{Button, Controller};
+use tetris::gamestate::*;
 pub use tetris::grid::*;
-pub use tetris::piece::*;
-pub use tetris::utils::*;
-pub use tetris::gamestate::*;
+use tetris::piece::*;
+use tetris::utils::*;
 
 fn handle_keyboard_input(key: Key, gs: &mut GameState) {
     match key {
@@ -35,19 +36,17 @@ struct TerminalGame(GameState);
 impl Controller for TerminalGame {
     type Key = Key;
 
-    fn key_to_button(&mut self, key: Self::Key) -> Option<Button> {
-        match key {
-            Key::Up => Some(Button::RotateClockwise),
-            Key::Left => Some(Button::MoveLeft),
-            Key::Right => Some(Button::MoveRight),
-            Key::Down => Some(Button::MoveDown),
-            Key::Char(' ') => Some(Button::Drop),
-            Key::Char('q') => Some(Button::Quit),
-            _ => None,
-        }
+    fn key_to_button_map(&mut self) -> HashMap<Self::Key, Button> {
+        HashMap::from([
+            (Key::Up, Button::RotateClockwise),
+            (Key::Left, Button::MoveLeft),
+            (Key::Right, Button::MoveRight),
+            (Key::Down, Button::MoveDown),
+            (Key::Char(' '), Button::Drop),
+            (Key::Char('q'), Button::Quit),
+        ])
     }
 }
-
 
 fn main() {
     let stdout = stdout();
@@ -79,12 +78,11 @@ fn main() {
         // Poll events and handle keyboard input
         if let Some(Ok(b)) = stdin.next() {
             if let Ok(Event::Key(key)) = parse_event(b, &mut stdin) {
-                    if let Some(button) = game.key_to_button(key) {
-                        game.0.handle_button_input(button);
-                    }
+                if let Some(button) = game.key_to_button(key) {
+                    game.0.handle_button_input(button);
+                }
             }
         }
-        
 
         // Wait ms_per_frame milliseconds before applying gravity
         thread::sleep(Duration::from_millis(ms_per_frame as u64));

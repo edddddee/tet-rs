@@ -3,7 +3,7 @@ use std::fmt;
 use crate::controls::Button;
 use crate::grid::{Grid, GRID_COLUMNS, GRID_ROWS};
 use crate::piece::{Piece, PieceDimensions, PieceKind};
-use crate::utils::{Direction, Rotation, MovementError};
+use crate::utils::{Direction, MovementError, Rotation};
 
 #[derive(Debug, Clone)]
 pub struct GameState {
@@ -124,8 +124,9 @@ impl GameState {
     }
 
     fn is_valid_rotation(&self, rot: Rotation, offset: (i32, i32)) -> bool {
-        let rotated_piecemap = self.active_piece.rotated_pieces[(self.active_piece.rotation + rot) as usize];
-        
+        let rotated_piecemap =
+            self.active_piece.rotated_pieces[(self.active_piece.rotation + rot) as usize];
+
         for (rx, ry) in rotated_piecemap {
             let (x, y) = (
                 self.active_piece.position.x + rx + offset.0,
@@ -138,38 +139,37 @@ impl GameState {
         true
     }
 
-    pub fn try_rotate(&mut self, rot: Rotation) -> Result<(), MovementError> {
-        let transition = (self.active_piece.rotation, (self.active_piece.rotation + rot));
+    fn try_rotate(&mut self, rot: Rotation) -> Result<(), MovementError> {
+        let transition = (
+            self.active_piece.rotation,
+            (self.active_piece.rotation + rot),
+        );
 
         let offset_list = match self.active_piece.kind {
-            PieceKind::I => {
-                match transition {
-                    (Rotation::Rot0, Rotation::Rot90) => [(-2, 0), (1, 0), (-2, -1), (1, 2)],
-                    (Rotation::Rot90, Rotation::Rot0) => [(2, 0), (-1, 0), (2, 1), (-1, -2)],
-                    (Rotation::Rot90, Rotation::Rot180) => [(-1, 0), (2, 0), (-1, 2), (2, -1)],
-                    (Rotation::Rot180, Rotation::Rot90) => [(1, 0), (-2, 0), (1, -2), (-2, 1)],
-                    (Rotation::Rot180, Rotation::Rot270) => [(2, 0), (-1, 0), (2, 1), (-1, -2)],
-                    (Rotation::Rot270, Rotation::Rot180) => [(-2, 0), (1, 0), (-2, -1), (1, 2)],
-                    (Rotation::Rot270, Rotation::Rot0) => [(1, 0), (-2, 0), (1, -2), (-2, 1)],
-                    (Rotation::Rot0, Rotation::Rot270) => [(-1, 0), (2, 0), (-1, 2), (2, -1)],
-                     _ => return Err(MovementError::RotationError),
-                }
-            }
-            _ => {
-                match transition {
-                     (Rotation::Rot0, Rotation::Rot90) => [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
-                     (Rotation::Rot90, Rotation::Rot0) => [(1, 0), (1, -1), (0, 2), (1, 2)],
-                     (Rotation::Rot90, Rotation::Rot180) => [(1, 0), (1, -1), (0, 2), (1, 2)],
-                     (Rotation::Rot180, Rotation::Rot90) => [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
-                     (Rotation::Rot180, Rotation::Rot270) => [(1, 0), (1, 1), (0, -2), (1, -2)],
-                     (Rotation::Rot270, Rotation::Rot180) => [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
-                     (Rotation::Rot270, Rotation::Rot0) => [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
-                     (Rotation::Rot0, Rotation::Rot270) => [(1, 0), (1, 1), (0, -2), (1, -2)],
-                     _ => return Err(MovementError::RotationError),
-                }
-            }
+            PieceKind::I => match transition {
+                (Rotation::Rot0, Rotation::Rot90) => [(-2, 0), (1, 0), (-2, -1), (1, 2)],
+                (Rotation::Rot90, Rotation::Rot0) => [(2, 0), (-1, 0), (2, 1), (-1, -2)],
+                (Rotation::Rot90, Rotation::Rot180) => [(-1, 0), (2, 0), (-1, 2), (2, -1)],
+                (Rotation::Rot180, Rotation::Rot90) => [(1, 0), (-2, 0), (1, -2), (-2, 1)],
+                (Rotation::Rot180, Rotation::Rot270) => [(2, 0), (-1, 0), (2, 1), (-1, -2)],
+                (Rotation::Rot270, Rotation::Rot180) => [(-2, 0), (1, 0), (-2, -1), (1, 2)],
+                (Rotation::Rot270, Rotation::Rot0) => [(1, 0), (-2, 0), (1, -2), (-2, 1)],
+                (Rotation::Rot0, Rotation::Rot270) => [(-1, 0), (2, 0), (-1, 2), (2, -1)],
+                _ => return Err(MovementError::RotationError),
+            },
+            _ => match transition {
+                (Rotation::Rot0, Rotation::Rot90) => [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
+                (Rotation::Rot90, Rotation::Rot0) => [(1, 0), (1, -1), (0, 2), (1, 2)],
+                (Rotation::Rot90, Rotation::Rot180) => [(1, 0), (1, -1), (0, 2), (1, 2)],
+                (Rotation::Rot180, Rotation::Rot90) => [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
+                (Rotation::Rot180, Rotation::Rot270) => [(1, 0), (1, 1), (0, -2), (1, -2)],
+                (Rotation::Rot270, Rotation::Rot180) => [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
+                (Rotation::Rot270, Rotation::Rot0) => [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
+                (Rotation::Rot0, Rotation::Rot270) => [(1, 0), (1, 1), (0, -2), (1, -2)],
+                _ => return Err(MovementError::RotationError),
+            },
         };
-        if self.is_valid_rotation(rot, (0,0)) {
+        if self.is_valid_rotation(rot, (0, 0)) {
             self.active_piece.rotate(rot)
         } else {
             for offset in offset_list {
@@ -184,7 +184,7 @@ impl GameState {
         Ok(())
     }
 
-    pub fn handle_button_input(&mut self, button: Button) {
+    pub fn on_button_pressed(&mut self, button: Button) {
         match button {
             Button::Quit => self.is_running = false,
             Button::MoveDown => self.try_move(Direction::Down),
