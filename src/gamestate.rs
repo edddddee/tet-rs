@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::controls::Button;
-use crate::grid::{Grid, GRID_COLUMNS, GRID_ROWS};
+use crate::grid::{Grid, GRID_COLUMNS, GRID_ROWS, GRID_VISIBLE_ROWS};
 use crate::piece::{Piece, PieceDimensions, PieceKind};
 use crate::utils::{Direction, MovementError, Rotation};
 
@@ -9,7 +9,7 @@ use crate::utils::{Direction, MovementError, Rotation};
 pub struct GameState {
     pub grid: Grid,
     pub active_piece: Piece,
-    pub is_running: bool,
+    pub gameover: bool,
 }
 
 impl Default for GameState {
@@ -17,7 +17,7 @@ impl Default for GameState {
         Self {
             grid: Grid::default(),
             active_piece: Piece::new(rand::random()),
-            is_running: true,
+            gameover: false,
         }
     }
 }
@@ -32,12 +32,23 @@ impl GameState {
 
     pub fn freeze_piece(&mut self) {
         let (x, y) = (self.active_piece.position.x, self.active_piece.position.y);
-        self.active_piece
-            .piece_dimensions
-            .piece_map
-            .iter()
-            .for_each(|(px, py)| self.grid.set_cell(x + px, y + py, self.active_piece.kind));
-        self.active_piece = Piece::new(rand::random());
+        if self.active_piece.y_min() >= GRID_VISIBLE_ROWS as i32 {
+            self.gameover = true;
+        } else {
+            self.active_piece
+                .piece_dimensions
+                .piece_map
+                .iter()
+                .for_each(|(px, py)| {
+                    self.grid.set_cell(x + px, y + py, self.active_piece.kind);
+                });
+            let new_piece = Piece::new(rand::random());
+            if self.grid.overlaps(&new_piece) {
+                self.gameover = true;
+            } else {
+                self.active_piece = new_piece;
+            }
+        }
     }
 
     pub fn clear_full_rows(&mut self) {
@@ -186,7 +197,7 @@ impl GameState {
 
     pub fn on_button_pressed(&mut self, button: Button) {
         match button {
-            Button::Quit => self.is_running = false,
+            Button::Quit => self.gameover = true,
             Button::MoveDown => self.try_move(Direction::Down),
             Button::MoveLeft => self.try_move(Direction::Left),
             Button::MoveRight => self.try_move(Direction::Right),
@@ -198,7 +209,7 @@ impl GameState {
 
 impl fmt::Display for GameState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for y in (0..GRID_ROWS).rev() {
+        for y in (0..GRID_VISIBLE_ROWS).rev() {
             for x in 0..GRID_COLUMNS {
                 let xcord = x as i8 - self.active_piece.position.x as i8;
                 let ycord = y as i8 - self.active_piece.position.y as i8;

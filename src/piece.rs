@@ -102,7 +102,7 @@ impl PieceDimensions {
             .iter()
             .min_by(|(_, y1), (_, y2)| y1.cmp(y2))
             .unwrap()
-            .0
+            .1
     }
 
     pub fn y_max(piece_map: PieceMap) -> i32 {
@@ -110,7 +110,7 @@ impl PieceDimensions {
             .iter()
             .max_by(|(y1, _), (_, y2)| y1.cmp(y2))
             .unwrap()
-            .0
+            .1
     }
 
     pub fn get_width(piece_map: PieceMap) -> i32 {
@@ -231,7 +231,7 @@ impl Piece {
             _ => panic!("Invalid piece type: {:?}", kind),
         };
         let xpos = GRID_COLUMNS as i32 / 2 - piece_dimensions.width / 2;
-        let ypos = 20 - PieceDimensions::y_min(piece_dimensions.piece_map);
+        let ypos = 23 - piece_dimensions.height - PieceDimensions::y_min(piece_dimensions.piece_map);//20 - PieceDimensions::y_min(piece_dimensions.piece_map);
         Piece {
             kind,
             rotated_pieces: piece_dimensions.get_rotated_piece_maps(origin),
@@ -277,5 +277,9 @@ impl Piece {
     }
     pub fn y_max(&self) -> i32 {
         self.position.y + PieceDimensions::y_max(self.piece_dimensions.piece_map)
+    }
+
+    pub fn get_rect(&self) -> (i32, i32, i32, i32) {
+        (self.x_min(), self.x_max(), self.y_min(), self.y_max())
     }
 }

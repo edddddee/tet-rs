@@ -1,7 +1,8 @@
 use crate::piece::{Piece, PieceKind, PieceDimensions};
 
 pub const GRID_COLUMNS: usize = 10;
-pub const GRID_ROWS: usize = 20;
+pub const GRID_ROWS: usize = 24;
+pub const GRID_VISIBLE_ROWS: usize = 20;
 
 type GridMap = [[PieceKind; GRID_COLUMNS]; GRID_ROWS];
 
@@ -45,7 +46,7 @@ impl Grid {
                 .next()
                 .unwrap_or(0) as i32
         });
-        return result;
+        result
     }
 
     pub fn is_within_bounds(x: i32, y: i32) -> bool {
@@ -75,5 +76,17 @@ impl Grid {
     pub fn clear_row(&mut self, row: usize) {
         assert!(row < GRID_ROWS, "Row {} out of bounds", row);
         (0..GRID_COLUMNS).for_each(|col| self.grid_map[row][col] = PieceKind::None)
+    }
+
+    pub fn overlaps(&mut self, piece: &Piece) -> bool {
+        let (x0, y0) = (piece.position.x, piece.position.y);
+        for (px, py) in piece.piece_dimensions.piece_map {
+           let (x, y) = (x0 + px, y0 + py); 
+           match self.get_cell(x, y) {
+               PieceKind::None => (),
+               _ => return true,
+           };
+        };
+        false
     }
 }

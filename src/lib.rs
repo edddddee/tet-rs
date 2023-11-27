@@ -4,3 +4,4 @@ pub mod piece;
 pub mod gamestate;
 pub mod controls;
 pub mod game;
+pub mod timer;
