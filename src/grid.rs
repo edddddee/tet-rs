@@ -1,4 +1,4 @@
-use crate::piece::{Piece, PieceKind, PieceDimensions};
+use crate::piece::{Piece, PieceKind};
 
 pub const GRID_COLUMNS: usize = 10;
 pub const GRID_ROWS: usize = 24;
@@ -14,24 +14,34 @@ pub struct Grid {
 
 impl Default for Grid {
     fn default() -> Self {
-        Self {
-            grid_map: [[PieceKind::None; GRID_COLUMNS]; GRID_ROWS],
-        }
+        Self::new()
+    }
+}
+
+impl From<GridMap> for Grid {
+    fn from(map: GridMap) -> Self {
+        Self { grid_map: map }
     }
 }
 
 impl Grid {
+    pub fn new() -> Self {
+        Self {
+            grid_map: [[PieceKind::None; GRID_COLUMNS]; GRID_ROWS],
+        }
+    }
+
     pub fn widths(&self) -> [i32; GRID_ROWS] {
         let mut result = [0i32; GRID_ROWS];
-        for row in 0..GRID_ROWS {
-            result[row] = self.grid_map[row]
+        result.iter_mut().enumerate().for_each(|(row, width)| {
+            *width = self.grid_map[row]
                 .iter()
                 .map(|kind| match kind {
                     PieceKind::None => 0,
                     _ => 1,
                 })
                 .sum();
-        }
+        });
         result
     }
 
@@ -44,7 +54,7 @@ impl Grid {
                 .skip_while(|row| self.grid_map[*row as usize][col] == PieceKind::None)
                 .map(|row| row + 1)
                 .next()
-                .unwrap_or(0) as i32
+                .unwrap_or(0)
         });
         result
     }
@@ -81,12 +91,99 @@ impl Grid {
     pub fn overlaps(&mut self, piece: &Piece) -> bool {
         let (x0, y0) = (piece.position.x, piece.position.y);
         for (px, py) in piece.piece_dimensions.piece_map {
-           let (x, y) = (x0 + px, y0 + py); 
-           match self.get_cell(x, y) {
-               PieceKind::None => (),
-               _ => return true,
-           };
-        };
+            let (x, y) = (x0 + px, y0 + py);
+            match self.get_cell(x, y) {
+                PieceKind::None => (),
+                _ => return true,
+            };
+        }
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_grid() {
+        // Empty grid
+        let grid = Grid::new();
+        // All widths should be 0
+        assert_eq!(grid.widths(), [0i32; GRID_ROWS]);
+        // All heights should be 0
+        assert_eq!(grid.heights(GRID_ROWS as i32), [0i32; GRID_COLUMNS]);
+    }
+
+    #[test]
+    fn full_grid() {
+        // Grid completely filled with I piece blocks
+        let grid_map: GridMap = [[PieceKind::I; GRID_COLUMNS]; GRID_ROWS];
+        let grid = Grid::from(grid_map);
+        // All rows should be GRID_COLUMNS wide
+        assert_eq!(grid.widths(), [GRID_COLUMNS as i32; GRID_ROWS]);
+        // All columns should be GRID_ROWS high
+        assert_eq!(
+            grid.heights(GRID_ROWS as i32),
+            [GRID_ROWS as i32; GRID_COLUMNS]
+        );
+    }
+
+    #[test]
+    fn bounds_checking() {
+        // Check all positions that SHOULD be within bounds
+        for x in 0..(GRID_COLUMNS as i32) {
+            for y in 0..(GRID_ROWS as i32) {
+                assert!(Grid::is_within_bounds(x, y))
+            }
+        }
+        // Test off-by-one cases (should be out of bounds)
+        assert!(!Grid::is_within_bounds(-1, 0));
+        assert!(!Grid::is_within_bounds(GRID_COLUMNS as i32, 0));
+        assert!(!Grid::is_within_bounds(0, -1));
+        assert!(!Grid::is_within_bounds(0, GRID_ROWS as i32));
+        // Try valid rectangles with different x values but same y values
+        for x1 in 0..(GRID_COLUMNS as i32) {
+            for x2 in x1..(GRID_COLUMNS as i32) {
+                let (y1, y2) = (0i32, GRID_ROWS as i32 - 1);
+                assert!(Grid::is_rect_inside(x1, x2, y1, y2));
+            }
+        }
+        // Try valid rectangles with different y values but same x values
+        for y1 in 0..(GRID_ROWS as i32) {
+            for y2 in y1..(GRID_ROWS as i32) {
+                let (x1, x2) = (0i32, GRID_COLUMNS as i32 - 1);
+                assert!(Grid::is_rect_inside(x1, x2, y1, y2));
+            }
+        }
+        // Test off-by-one rectangles
+        assert!(!Grid::is_rect_inside(-1, 0, 0, 1));
+        assert!(!Grid::is_rect_inside(
+            GRID_COLUMNS as i32 - 1,
+            GRID_COLUMNS as i32,
+            0,
+            1
+        ));
+        assert!(!Grid::is_rect_inside(0, 1, -1, 0));
+        assert!(!Grid::is_rect_inside(
+            0,
+            1,
+            GRID_ROWS as i32 - 1,
+            GRID_ROWS as i32
+        ));
+    }
+
+    #[test]
+    fn row_clearing() {
+        // Grid completely filled with I piece blocks
+        let grid_map: GridMap = [[PieceKind::I; GRID_COLUMNS]; GRID_ROWS];
+        let mut grid = Grid::from(grid_map);
+        // Clear every row
+        for row in 0..GRID_ROWS {
+            grid.clear_row(row)
+        }
+        // Now grid should be completely empty
+        assert_eq!(grid.widths(), [0i32; GRID_ROWS]);
+        assert_eq!(grid.heights(GRID_ROWS as i32), [0i32; GRID_COLUMNS]);
     }
 }

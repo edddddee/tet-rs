@@ -9,7 +9,7 @@ use std::thread;
 use std::time::Duration;
 
 use termion::color;
-use termion::event::{self, parse_event, Event, Key};
+use termion::event::{self, parse_event, Event};
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::{async_stdin, AsyncReader};
 

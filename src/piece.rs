@@ -1,6 +1,6 @@
 use termion::color;
 
-use crate::grid::{GRID_COLUMNS, GRID_ROWS};
+use crate::grid::GRID_COLUMNS;
 use crate::utils::{Direction, Rotation};
 
 use rand::{

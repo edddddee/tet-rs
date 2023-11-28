@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::controls::Button;
-use crate::grid::{Grid, GRID_COLUMNS, GRID_ROWS, GRID_VISIBLE_ROWS};
+use crate::grid::{Grid, GRID_COLUMNS, GRID_VISIBLE_ROWS};
 use crate::piece::{Piece, PieceDimensions, PieceKind};
 use crate::utils::{Direction, MovementError, Rotation};
 
