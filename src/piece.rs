@@ -57,7 +57,7 @@ impl fmt::Display for PieceKind {
         match self {
             PieceKind::I => write!(f, "{}{}", color::Fg(color::LightBlue), BLOCK_STR),
             PieceKind::J => write!(f, "{}{}", color::Fg(color::Rgb(75, 0, 130)), BLOCK_STR),
-            PieceKind::L => write!(f, "{}{}", color::Fg(color::Rgb(255, 140, 0)), BLOCK_STR),
+            PieceKind::L => write!(f, "{}{}", color::Fg(color::Rgb(255, 100, 0)), BLOCK_STR),
             PieceKind::O => write!(f, "{}{}", color::Fg(color::Yellow), BLOCK_STR),
             PieceKind::S => write!(f, "{}{}", color::Fg(color::LightGreen), BLOCK_STR),
             PieceKind::T => write!(f, "{}{}", color::Fg(color::Magenta), BLOCK_STR),
