@@ -1,8 +1,10 @@
 use std::fmt;
 
+use termion::color;
+
 use crate::controls::Button;
 use crate::grid::{Grid, GRID_COLUMNS, GRID_VISIBLE_ROWS};
-use crate::piece::{Piece, PieceDimensions, PieceKind, self};
+use crate::piece::{self, Piece, PieceDimensions, PieceKind};
 use crate::utils::{Direction, MovementError, Rotation};
 
 #[derive(Debug, Clone)]
@@ -47,7 +49,8 @@ impl GameState {
                     self.grid.set_cell(x + px, y + py, self.active_piece.kind);
                 });
             let new_piece_kind = self.current_piece_bag.pop().unwrap_or_else(|| {
-                self.current_piece_bag = std::mem::replace(&mut self.next_piece_bag, piece::gen_piece_bag().to_vec());
+                self.current_piece_bag =
+                    std::mem::replace(&mut self.next_piece_bag, piece::gen_piece_bag().to_vec());
                 self.current_piece_bag.pop().unwrap()
             });
             let new_piece = Piece::new(new_piece_kind);
@@ -217,19 +220,27 @@ impl GameState {
 
 impl fmt::Display for GameState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ydrop = self.distance_to_drop();
         for y in (0..GRID_VISIBLE_ROWS).rev() {
             for x in 0..GRID_COLUMNS {
-                let xcord = x as i8 - self.active_piece.position.x as i8;
-                let ycord = y as i8 - self.active_piece.position.y as i8;
-                if xcord >= 0
-                    && ycord >= 0
-                    && self
-                        .active_piece
-                        .piece_dimensions
-                        .piece_map
-                        .contains(&(xcord as i32, ycord as i32))
+                let rel_x = x as i32 - self.active_piece.position.x;
+                let rel_y = y as i32 - self.active_piece.position.y;
+
+                if self
+                    .active_piece
+                    .piece_dimensions
+                    .piece_map
+                    .contains(&(rel_x, rel_y))
                 {
                     write!(f, "{}", self.active_piece.kind)?;
+                } else if self
+                    .active_piece
+                    .piece_dimensions
+                    .piece_map
+                    .contains(&(rel_x, rel_y + ydrop))
+                {
+                    // Draw ghost piece
+                    write!(f, "{}{}", color::Fg(color::Rgb(150,150,150)), piece::BLOCK_STR)?;
                 } else {
                     write!(f, "{}", self.grid.grid_map[y][x])?;
                 }

@@ -45,12 +45,12 @@ pub(crate) const PIECE_VEC: [PieceKind; 7] = [
 
 pub fn gen_piece_bag() -> [PieceKind; 7] {
     let mut rng = rand::thread_rng();
-    let mut piece_bag = PIECE_VEC.clone();
+    let mut piece_bag = PIECE_VEC;
     piece_bag.shuffle(&mut rng);
     piece_bag
 }
 
-const BLOCK_STR: &str = "■";
+pub const BLOCK_STR: &str = "■";
 
 impl fmt::Display for PieceKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
