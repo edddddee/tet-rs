@@ -5,7 +5,7 @@ use termion::color;
 use crate::controls::Button;
 use crate::grid::{Grid, GRID_COLUMNS, GRID_VISIBLE_ROWS};
 use crate::piece::{self, Piece, PieceDimensions, PieceKind};
-use crate::utils::{Direction, MovementError, Rotation};
+use crate::utils::{Direction, Rotation};
 
 #[derive(Debug, Clone)]
 pub struct GameState {
@@ -161,7 +161,7 @@ impl GameState {
         true
     }
 
-    fn try_rotate(&mut self, rot: Rotation) -> Result<(), MovementError> {
+    fn try_rotate(&mut self, rot: Rotation) {
         let transition = (
             self.active_piece.rotation,
             (self.active_piece.rotation + rot),
@@ -177,7 +177,7 @@ impl GameState {
                 (Rotation::Rot270, Rotation::Rot180) => [(-2, 0), (1, 0), (-2, -1), (1, 2)],
                 (Rotation::Rot270, Rotation::Rot0) => [(1, 0), (-2, 0), (1, -2), (-2, 1)],
                 (Rotation::Rot0, Rotation::Rot270) => [(-1, 0), (2, 0), (-1, 2), (2, -1)],
-                _ => return Err(MovementError::RotationError),
+                _ => unreachable!(),
             },
             _ => match transition {
                 (Rotation::Rot0, Rotation::Rot90) => [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
@@ -188,7 +188,7 @@ impl GameState {
                 (Rotation::Rot270, Rotation::Rot180) => [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
                 (Rotation::Rot270, Rotation::Rot0) => [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
                 (Rotation::Rot0, Rotation::Rot270) => [(1, 0), (1, 1), (0, -2), (1, -2)],
-                _ => return Err(MovementError::RotationError),
+                _ => unreachable!(),
             },
         };
         if self.is_valid_rotation(rot, (0, 0)) {
@@ -203,7 +203,6 @@ impl GameState {
                 }
             }
         };
-        Ok(())
     }
 
     pub fn on_button_pressed(&mut self, button: Button) {
@@ -213,7 +212,7 @@ impl GameState {
             Button::MoveLeft => self.try_move(Direction::Left),
             Button::MoveRight => self.try_move(Direction::Right),
             Button::Drop => self.drop_piece(),
-            Button::RotateClockwise => self.try_rotate(Rotation::Rot90).unwrap_or(()),
+            Button::RotateClockwise => self.try_rotate(Rotation::Rot90),
         };
     }
 }
