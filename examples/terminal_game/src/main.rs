@@ -44,7 +44,7 @@ impl<'a> GameImplementation for TerminalGame<'a> {
             ]),
             stdout: stdout().lock().into_raw_mode().unwrap(),
             async_input_reader: async_stdin().bytes(),
-            gravity_timer: Timer::new(Duration::from_millis(1000000), Mode::Repeating),
+            gravity_timer: Timer::new(Duration::from_millis(1000), Mode::Repeating),
             update_timer: Timer::new(Duration::from_millis(17), Mode::Repeating),
         }
     }
@@ -87,7 +87,6 @@ impl<'a> GameImplementation for TerminalGame<'a> {
             self.game_state
         )
         .unwrap();
-        write!(self.stdout, "ymin: {} y: {}", self.game_state.active_piece.y_min(), self.game_state.active_piece.position.y).unwrap();
         // Handle keyboard input
         if let Some(Ok(b)) = self.async_input_reader.next() {
             if let Ok(Event::Key(key)) = parse_event(b, &mut self.async_input_reader) {

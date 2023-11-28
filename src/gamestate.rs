@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::controls::Button;
 use crate::grid::{Grid, GRID_COLUMNS, GRID_VISIBLE_ROWS};
-use crate::piece::{Piece, PieceDimensions, PieceKind};
+use crate::piece::{Piece, PieceDimensions, PieceKind, self};
 use crate::utils::{Direction, MovementError, Rotation};
 
 #[derive(Debug, Clone)]
@@ -10,6 +10,8 @@ pub struct GameState {
     pub grid: Grid,
     pub active_piece: Piece,
     pub gameover: bool,
+    pub current_piece_bag: Vec<PieceKind>,
+    pub next_piece_bag: Vec<PieceKind>,
 }
 
 impl Default for GameState {
@@ -18,6 +20,8 @@ impl Default for GameState {
             grid: Grid::default(),
             active_piece: Piece::new(rand::random()),
             gameover: false,
+            current_piece_bag: piece::gen_piece_bag().to_vec(),
+            next_piece_bag: piece::gen_piece_bag().to_vec(),
         }
     }
 }
@@ -42,7 +46,11 @@ impl GameState {
                 .for_each(|(px, py)| {
                     self.grid.set_cell(x + px, y + py, self.active_piece.kind);
                 });
-            let new_piece = Piece::new(rand::random());
+            let new_piece_kind = self.current_piece_bag.pop().unwrap_or_else(|| {
+                self.current_piece_bag = std::mem::replace(&mut self.next_piece_bag, piece::gen_piece_bag().to_vec());
+                self.current_piece_bag.pop().unwrap()
+            });
+            let new_piece = Piece::new(new_piece_kind);
             if self.grid.overlaps(&new_piece) {
                 self.gameover = true;
             } else {

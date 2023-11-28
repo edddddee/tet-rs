@@ -1,3 +1,4 @@
+use rand::seq::SliceRandom;
 use termion::color;
 
 use crate::grid::GRID_COLUMNS;
@@ -30,6 +31,23 @@ pub enum PieceKind {
     T,
     Z,
     None,
+}
+
+pub(crate) const PIECE_VEC: [PieceKind; 7] = [
+    PieceKind::I,
+    PieceKind::J,
+    PieceKind::L,
+    PieceKind::O,
+    PieceKind::S,
+    PieceKind::T,
+    PieceKind::Z,
+];
+
+pub fn gen_piece_bag() -> [PieceKind; 7] {
+    let mut rng = rand::thread_rng();
+    let mut piece_bag = PIECE_VEC.clone();
+    piece_bag.shuffle(&mut rng);
+    piece_bag
 }
 
 const BLOCK_STR: &str = "■";
@@ -231,7 +249,8 @@ impl Piece {
             _ => panic!("Invalid piece type: {:?}", kind),
         };
         let xpos = GRID_COLUMNS as i32 / 2 - piece_dimensions.width / 2;
-        let ypos = 23 - piece_dimensions.height - PieceDimensions::y_min(piece_dimensions.piece_map);//20 - PieceDimensions::y_min(piece_dimensions.piece_map);
+        let ypos =
+            23 - piece_dimensions.height - PieceDimensions::y_min(piece_dimensions.piece_map); //20 - PieceDimensions::y_min(piece_dimensions.piece_map);
         Piece {
             kind,
             rotated_pieces: piece_dimensions.get_rotated_piece_maps(origin),
