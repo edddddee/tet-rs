@@ -1,7 +1,8 @@
-pub mod utils;
-pub mod grid;
-pub mod piece;
-pub mod gamestate;
+pub(crate) mod utils;
+pub(crate) mod grid;
+pub(crate) mod piece;
 pub mod controls;
+pub mod gamestate;
 pub mod game;
 pub mod timer;
+pub mod bot;
