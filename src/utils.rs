@@ -15,15 +15,15 @@ pub enum Direction {
     Right,
 }
 
-impl TryFrom<i32> for Rotation {
-    type Error = ();
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
+impl From<i32> for Rotation {
+    fn from(mut value: i32) -> Self {
+        value = value.rem_euclid(4);
         match value {
-            0 => Ok(Rotation::Rot0),
-            1 => Ok(Rotation::Rot90),
-            2 => Ok(Rotation::Rot180),
-            3 => Ok(Rotation::Rot270),
-            _ => Err(()),
+            0 => Rotation::Rot0,
+            1 => Rotation::Rot90,
+            2 => Rotation::Rot180,
+            3 => Rotation::Rot270,
+            _ => unreachable!(),
         }
     }
 }
@@ -31,26 +31,25 @@ impl TryFrom<i32> for Rotation {
 impl std::ops::Add for Rotation {
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
-        Self::try_from((self as i32 + rhs as i32).rem_euclid(4)).unwrap()
+        Self::from(self as i32 + rhs as i32)
     }
 }
 
 impl std::ops::AddAssign for Rotation {
     fn add_assign(&mut self, rhs: Self) {
-        *self = Self::try_from((*self as i32 + rhs as i32).rem_euclid(4)).unwrap()
+        *self = Self::from(*self as i32 + rhs as i32)
     }
 }
 
 impl std::ops::Sub for Rotation {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
-        Self::try_from((self as i32 - rhs as i32).rem_euclid(4)).unwrap()
+        Self::from(self as i32 - rhs as i32)
     }
 }
 
 impl std::ops::SubAssign for Rotation {
     fn sub_assign(&mut self, rhs: Self) {
-        *self = Self::try_from((*self as i32 - rhs as i32).rem_euclid(4)).unwrap()
+        *self = Self::from(*self as i32 - rhs as i32)
     }
 }
-
